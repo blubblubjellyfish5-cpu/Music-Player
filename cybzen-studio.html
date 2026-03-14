@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CybZ-Zen Studio</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+    <style>
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-pink: #ff00ea;
+            --neon-gold: #ffcc00;
+            --neon-green: #00ffaa;
+            --leaf-purple: rgba(200, 160, 255, 0.6);
+            --glass: rgba(15, 15, 25, 0.7);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0a0a0f;
+            font-family: 'Segoe UI', sans-serif;
+            color: white;
+        }
+
+        #leafCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            padding: 20px 0;
+            box-sizing: border-box;
+        }
+
+        .player-card {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2.5rem;
+            border-radius: 35px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            width: 380px;
+            text-align: center;
+        }
+
+        h2 {
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            color: var(--neon-blue);
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .btn-upload {
+            background: transparent;
+            border: 2px solid var(--neon-pink);
+            color: var(--neon-pink);
+            padding: 12px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            display: inline-block;
+            margin-bottom: 25px;
+        }
+
+        .btn-upload:hover {
+            background: var(--neon-pink);
+            color: white;
+            box-shadow: 0 0 20px var(--neon-pink);
+        }
+
+        input[type="file"] { display: none; }
+
+        .control-row { text-align: left; margin-bottom: 18px; }
+
+        label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            color: #888;
+            letter-spacing: 1px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: #222;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--neon-blue);
+        }
+
+        .atmos-btn {
+            width: 100%;
+            padding: 14px;
+            margin-top: 10px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--neon-gold);
+            color: var(--neon-gold);
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.4s;
+            text-transform: uppercase;
+        }
+
+        .atmos-btn.active {
+            background: var(--neon-gold);
+            color: black;
+            box-shadow: 0 0 20px var(--neon-gold);
+        }
+
+        audio {
+            width: 100%;
+            margin-top: 25px;
+            filter: invert(1) hue-rotate(180deg) opacity(0.7);
+        }
+
+        .track-info {
+            font-size: 0.75rem;
+            margin-top: 15px;
+            color: var(--leaf-purple);
+            font-family: monospace;
+        }
+
+        /* ── Export Section ── */
+        .export-divider {
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            margin: 22px 0 18px;
+        }
+
+        .export-label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .export-section-title {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #555;
+        }
+
+        .format-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .format-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #888;
+            padding: 5px 14px;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.25s;
+            letter-spacing: 1px;
+        }
+
+        .format-btn.selected {
+            border-color: var(--neon-green);
+            color: var(--neon-green);
+            background: rgba(0,255,170,0.08);
+            box-shadow: 0 0 8px rgba(0,255,170,0.25);
+        }
+
+        .download-btn {
+            width: 100%;
+            padding: 14px;
+            background: transparent;
+            border: 1.5px solid var(--neon-green);
+            color: var(--neon-green);
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: 0.35s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .download-btn:hover:not(:disabled) {
+            background: var(--neon-green);
+            color: #000;
+            box-shadow: 0 0 22px var(--neon-green);
+        }
+
+        .download-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            border-color: #444;
+            color: #444;
+        }
+
+        .render-status {
+            font-size: 0.7rem;
+            font-family: monospace;
+            margin-top: 10px;
+            min-height: 18px;
+            color: var(--neon-green);
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .render-status.visible {
+            opacity: 1;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { text-shadow: 0 0 6px var(--neon-green); }
+            50%       { text-shadow: 0 0 18px var(--neon-green), 0 0 30px var(--neon-green); }
+        }
+
+        .render-status.rendering {
+            animation: pulse-glow 1s infinite;
+        }
+
+        /* ── Progress Bar ── */
+        .progress-wrap {
+            margin-top: 12px;
+            display: none;
+        }
+
+        .progress-wrap.visible {
+            display: block;
+        }
+
+        .progress-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            font-family: monospace;
+            color: #666;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .progress-label-row span:last-child {
+            color: var(--neon-green);
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 10px;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-green));
+            box-shadow: 0 0 10px var(--neon-green);
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0;
+            width: 30px; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4));
+            border-radius: 10px;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+
+        .progress-step {
+            font-size: 0.58rem;
+            font-family: monospace;
+            color: #333;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            transition: color 0.3s;
+        }
+
+        .progress-step.active {
+            color: var(--neon-green);
+            text-shadow: 0 0 8px var(--neon-green);
+        }
+
+        .progress-step.done {
+            color: #446655;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="leafCanvas"></canvas>
+
+<div class="container">
+    <div class="player-card">
+        <h2>Cyber-Zen Studio</h2>
+
+        <label class="btn-upload">
+            LOAD MUSIC
+            <input type="file" id="fileInput" accept="audio/*">
+        </label>
+
+        <div class="control-row">
+            <label>Bass Surge</label>
+            <input type="range" id="bassSlider" min="0" max="15" value="0">
+        </div>
+
+        <div class="control-row">
+            <label>Ethereal Reverb</label>
+            <input type="range" id="reverbSlider" min="0" max="1" step="0.01" value="0">
+        </div>
+
+        <button id="atmosBtn" class="atmos-btn">Dolby Atmos: OFF</button>
+
+        <!-- ── Export Controls ── -->
+        <hr class="export-divider">
+
+        <div class="export-label-row">
+            <span class="export-section-title">Export with Effects</span>
+            <div class="format-toggle">
+                <button class="format-btn selected" data-fmt="wav">WAV</button>
+                <button class="format-btn" data-fmt="mp3">MP3</button>
+            </div>
+        </div>
+
+        <button id="downloadBtn" class="download-btn" disabled>⬇ Download With Effects</button>
+        <div id="renderStatus" class="render-status"></div>
+
+        <!-- ── Progress Bar ── -->
+        <div id="progressWrap" class="progress-wrap">
+            <div class="progress-label-row">
+                <span id="progressPhase">Processing</span>
+                <span id="progressPct">0%</span>
+            </div>
+            <div class="progress-track">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div class="progress-steps">
+                <span class="progress-step" id="step1">① Decode</span>
+                <span class="progress-step" id="step2">② Render</span>
+                <span class="progress-step" id="step3">③ Encode</span>
+                <span class="progress-step" id="step4">④ Done</span>
+            </div>
+        </div>
+
+        <!-- ── End Export Controls ── -->
+
+        <audio id="audioElement" controls></audio>
+        <div id="trackName" class="track-info">Awaiting signal...</div>
+    </div>
+</div>
+
+<script>
+    /* ══════════════════════════════════════════
+       1. LEAF ANIMATION — UNCHANGED
+    ══════════════════════════════════════════ */
+    const canvas = document.getElementById('leafCanvas');
+    const ctx    = canvas.getContext('2d');
+    let leaves   = [];
+
+    function resize() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Leaf {
+        constructor() { this.reset(); }
+        reset() {
+            this.x     = Math.random() * canvas.width;
+            this.y     = -20;
+            this.size  = Math.random() * 10 + 5;
+            this.speed = Math.random() * 1 + 0.5;
+            this.angle = Math.random() * Math.PI * 2;
+            this.spin  = Math.random() * 0.02 - 0.01;
+            this.wind  = Math.random() * 0.5 - 0.25;
+        }
+        update() {
+            this.y     += this.speed;
+            this.x     += this.wind;
+            this.angle += this.spin;
+            if (this.y > canvas.height) this.reset();
+        }
+        draw() {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(this.size, -this.size, 0, -this.size * 2);
+            ctx.quadraticCurveTo(-this.size, -this.size, 0, 0);
+            ctx.fillStyle = "rgba(180, 140, 255, 0.3)";
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    for (let i = 0; i < 40; i++) leaves.push(new Leaf());
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        leaves.forEach(l => { l.update(); l.draw(); });
+        requestAnimationFrame(animate);
+    }
+    animate();
+
+
+    /* ══════════════════════════════════════════
+       2. AUDIO ENGINE — UNCHANGED
+    ══════════════════════════════════════════ */
+    const audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+    const audioEl   = document.getElementById('audioElement');
+    const source    = audioCtx.createMediaElementSource(audioEl);
+
+    const bassFilter  = audioCtx.createBiquadFilter();
+    const reverbNode  = audioCtx.createConvolver();
+    const dryGain     = audioCtx.createGain();
+    const wetGain     = audioCtx.createGain();
+    const compressor  = audioCtx.createDynamicsCompressor();
+
+    bassFilter.type            = "lowshelf";
+    bassFilter.frequency.value = 180;
+    bassFilter.gain.value      = 0;
+
+    compressor.threshold.setValueAtTime(-20, audioCtx.currentTime);
+    compressor.ratio.setValueAtTime(10,     audioCtx.currentTime);
+
+    /* Shared impulse-response buffer (reused by export) */
+    const irLen = audioCtx.sampleRate * 2.5;
+    const irBuf = audioCtx.createBuffer(2, irLen, audioCtx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+        let d = irBuf.getChannelData(c);
+        for (let i = 0; i < irLen; i++)
+            d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 2.2);
+    }
+    reverbNode.buffer = irBuf;
+
+    source.connect(bassFilter);
+    bassFilter.connect(dryGain);
+    bassFilter.connect(reverbNode);
+    reverbNode.connect(wetGain);
+    dryGain.connect(audioCtx.destination);
+    wetGain.connect(audioCtx.destination);
+
+    document.getElementById('bassSlider').oninput = function () {
+        bassFilter.gain.setTargetAtTime(this.value, audioCtx.currentTime, 0.1);
+    };
+
+    document.getElementById('reverbSlider').oninput = function () {
+        const val = parseFloat(this.value);
+        wetGain.gain.setTargetAtTime(val * 1.5,         audioCtx.currentTime, 0.1);
+        dryGain.gain.setTargetAtTime(1 - (val * 0.3),   audioCtx.currentTime, 0.1);
+    };
+
+    let atmos = false;
+    document.getElementById('atmosBtn').onclick = function () {
+        atmos = !atmos;
+        this.classList.toggle('active');
+        this.innerText = atmos ? "Dolby Atmos: ON" : "Dolby Atmos: OFF";
+        dryGain.disconnect();
+        if (atmos) {
+            dryGain.connect(compressor);
+            compressor.connect(audioCtx.destination);
+        } else {
+            dryGain.connect(audioCtx.destination);
+        }
+    };
+
+
+    /* ══════════════════════════════════════════
+       3. FILE HANDLING — extended to store raw file
+    ══════════════════════════════════════════ */
+    let selectedFile = null;
+
+    document.getElementById('fileInput').onchange = function () {
+        if (this.files[0]) {
+            selectedFile = this.files[0];
+            audioEl.src = URL.createObjectURL(selectedFile);
+            document.getElementById('trackName').innerText = selectedFile.name;
+            document.getElementById('downloadBtn').disabled = false;
+            audioCtx.resume();
+            audioEl.play();
+        }
+    };
+
+
+    /* ══════════════════════════════════════════
+       4. EXPORT FORMAT SELECTOR
+    ══════════════════════════════════════════ */
+    let selectedFormat = 'wav';
+
+    document.querySelectorAll('.format-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedFormat = btn.dataset.fmt;
+        });
+    });
+
+
+    /* ══════════════════════════════════════════
+       5. EXPORT ENGINE
+    ══════════════════════════════════════════ */
+
+    /* ── UI helpers ── */
+    function setStatus(msg, isRendering = false) {
+        const el = document.getElementById('renderStatus');
+        el.textContent = msg;
+        el.classList.toggle('visible',   !!msg);
+        el.classList.toggle('rendering', isRendering);
+    }
+
+    /* ── Progress Bar helpers ── */
+    function setProgress(pct, phase, stepIndex) {
+        document.getElementById('progressWrap').classList.add('visible');
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressPct').textContent  = Math.round(pct) + '%';
+        document.getElementById('progressPhase').textContent = phase;
+
+        const steps = ['step1','step2','step3','step4'];
+        steps.forEach((id, i) => {
+            const el = document.getElementById(id);
+            el.classList.remove('active','done');
+            if (i < stepIndex)  el.classList.add('done');
+            if (i === stepIndex) el.classList.add('active');
+        });
+    }
+
+    function hideProgress() {
+        setTimeout(() => {
+            document.getElementById('progressWrap').classList.remove('visible');
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressPct').textContent  = '0%';
+            ['step1','step2','step3','step4'].forEach(id => {
+                document.getElementById(id).classList.remove('active','done');
+            });
+        }, 2800);
+    }
+
+    /* ── Encode rendered AudioBuffer → WAV Blob ── */
+    function audioBufferToWav(buffer) {
+        const numCh    = buffer.numberOfChannels;
+        const numSamp  = buffer.length;
+        const sRate    = buffer.sampleRate;
+        const bitsPerSample = 16;
+        const blockAlign    = numCh * (bitsPerSample / 8);
+        const byteRate      = sRate * blockAlign;
+        const dataSize      = numSamp * blockAlign;
+        const ab  = new ArrayBuffer(44 + dataSize);
+        const dv  = new DataView(ab);
+
+        const writeStr = (off, str) => { for (let i = 0; i < str.length; i++) dv.setUint8(off + i, str.charCodeAt(i)); };
+        writeStr(0,  'RIFF');
+        dv.setUint32(4,  36 + dataSize, true);
+        writeStr(8,  'WAVE');
+        writeStr(12, 'fmt ');
+        dv.setUint32(16, 16,            true);  // PCM chunk size
+        dv.setUint16(20, 1,             true);  // PCM format
+        dv.setUint16(22, numCh,         true);
+        dv.setUint32(24, sRate,         true);
+        dv.setUint32(28, byteRate,      true);
+        dv.setUint16(32, blockAlign,    true);
+        dv.setUint16(34, bitsPerSample, true);
+        writeStr(36, 'data');
+        dv.setUint32(40, dataSize, true);
+
+        /* Interleave + clamp → 16-bit PCM */
+        let offset = 44;
+        for (let i = 0; i < numSamp; i++) {
+            for (let ch = 0; ch < numCh; ch++) {
+                const s = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+                dv.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                offset += 2;
+            }
+        }
+        return new Blob([ab], { type: 'audio/wav' });
+    }
+
+    /* ── Encode rendered AudioBuffer → MP3 Blob via lamejs ── */
+    function audioBufferToMp3(buffer) {
+        const numCh   = buffer.numberOfChannels;
+        const sRate   = buffer.sampleRate;
+        const kbps    = 128;
+        const mp3enc  = new lamejs.Mp3Encoder(numCh, sRate, kbps);
+        const blockSize = 1152;
+        const mp3Data   = [];
+
+        /* Convert Float32 → Int16 */
+        const toInt16 = (float32) => {
+            const int16 = new Int16Array(float32.length);
+            for (let i = 0; i < float32.length; i++) {
+                const s = Math.max(-1, Math.min(1, float32[i]));
+                int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            return int16;
+        };
+
+        const left  = toInt16(buffer.getChannelData(0));
+        const right = numCh > 1 ? toInt16(buffer.getChannelData(1)) : left;
+
+        for (let i = 0; i < left.length; i += blockSize) {
+            const lChunk = left.subarray(i, i + blockSize);
+            const rChunk = right.subarray(i, i + blockSize);
+            const encoded = numCh > 1
+                ? mp3enc.encodeBuffer(lChunk, rChunk)
+                : mp3enc.encodeBuffer(lChunk);
+            if (encoded.length > 0) mp3Data.push(new Int8Array(encoded));
+        }
+
+        const flushed = mp3enc.flush();
+        if (flushed.length > 0) mp3Data.push(new Int8Array(flushed));
+
+        return new Blob(mp3Data, { type: 'audio/mp3' });
+    }
+
+    /* ── Build the offline effect graph (mirrors live graph) ── */
+    function buildOfflineGraph(offlineCtx, srcBuf) {
+        /* Read current UI state */
+        const bassGain   = parseFloat(document.getElementById('bassSlider').value);
+        const reverbVal  = parseFloat(document.getElementById('reverbSlider').value);
+        const atmosOn    = atmos;
+
+        /* Source */
+        const bufSrc = offlineCtx.createBufferSource();
+        bufSrc.buffer = srcBuf;
+
+        /* Bass filter */
+        const bass = offlineCtx.createBiquadFilter();
+        bass.type            = 'lowshelf';
+        bass.frequency.value = 180;
+        bass.gain.value      = bassGain;
+
+        /* Reverb convolver — recreate the same IR */
+        const convolver = offlineCtx.createConvolver();
+        const irLenOff  = offlineCtx.sampleRate * 2.5;
+        /* Deterministic IR: use the same algorithm, seeded by same loop */
+        const irOff = offlineCtx.createBuffer(2, irLenOff, offlineCtx.sampleRate);
+        /* Copy the live IR data so they are identical */
+        for (let c = 0; c < 2; c++) {
+            const src = irBuf.getChannelData(c);
+            const dst = irOff.getChannelData(c);
+            /* irBuf may have different sampleRate than offline; resample manually */
+            const ratio = irLenOff / irLen;
+            for (let i = 0; i < irLenOff; i++) {
+                const srcIdx = Math.min(irLen - 1, Math.floor(i / ratio));
+                dst[i] = src[srcIdx];
+            }
+        }
+        convolver.buffer = irOff;
+
+        /* Dry / wet gains */
+        const dry = offlineCtx.createGain();
+        const wet = offlineCtx.createGain();
+        dry.gain.value = 1 - (reverbVal * 0.3);
+        wet.gain.value = reverbVal * 1.5;
+
+        /* Atmos compressor */
+        let comp = null;
+        if (atmosOn) {
+            comp = offlineCtx.createDynamicsCompressor();
+            comp.threshold.setValueAtTime(-20, offlineCtx.currentTime);
+            comp.ratio.setValueAtTime(10,      offlineCtx.currentTime);
+        }
+
+        /* Connect graph */
+        bufSrc.connect(bass);
+        bass.connect(dry);
+        bass.connect(convolver);
+        convolver.connect(wet);
+        wet.connect(offlineCtx.destination);
+
+        if (atmosOn) {
+            dry.connect(comp);
+            comp.connect(offlineCtx.destination);
+        } else {
+            dry.connect(offlineCtx.destination);
+        }
+
+        bufSrc.start(0);
+        return bufSrc; /* Not strictly needed but returned for clarity */
+    }
+
+    /* ── Main export handler ── */
+    document.getElementById('downloadBtn').addEventListener('click', async () => {
+        if (!selectedFile) return;
+
+        const btn = document.getElementById('downloadBtn');
+        btn.disabled = true;
+        setStatus('Rendering CybZen Effect...', true);
+
+        try {
+            /* ── Phase 1: Read & Decode ── */
+            setProgress(5, 'Reading file...', 0);
+            const arrayBuf = await selectedFile.arrayBuffer();
+
+            setProgress(20, 'Decoding audio...', 0);
+            const decoded  = await audioCtx.decodeAudioData(arrayBuf);
+
+            /* ── Phase 2: Build & Render Offline Graph ── */
+            setProgress(35, 'Building effect graph...', 1);
+            const offlineCtx = new OfflineAudioContext(
+                decoded.numberOfChannels,
+                decoded.length,
+                decoded.sampleRate
+            );
+            buildOfflineGraph(offlineCtx, decoded);
+
+            /* Rendering — animate bar from 35→70 while waiting */
+            setProgress(40, 'Rendering effects...', 1);
+            let fakeP = 40;
+            const renderTick = setInterval(() => {
+                if (fakeP < 68) { fakeP += 1.5; setProgress(fakeP, 'Rendering effects...', 1); }
+            }, 80);
+
+            const renderedBuf = await offlineCtx.startRendering();
+            clearInterval(renderTick);
+            setProgress(70, 'Render complete!', 1);
+
+            /* ── Phase 3: Encode ── */
+            setProgress(75, `Encoding to ${selectedFormat.toUpperCase()}...`, 2);
+
+            /* Yield to browser so progress bar paints before heavy encoding */
+            await new Promise(r => setTimeout(r, 30));
+
+            let blob, ext;
+            if (selectedFormat === 'mp3') {
+                /* Animate during MP3 encoding (CPU-heavy) */
+                let encP = 75;
+                const encTick = setInterval(() => {
+                    if (encP < 90) { encP += 1; setProgress(encP, 'Encoding MP3...', 2); }
+                }, 60);
+                blob = audioBufferToMp3(renderedBuf);
+                clearInterval(encTick);
+                ext  = 'mp3';
+            } else {
+                blob = audioBufferToWav(renderedBuf);
+                ext  = 'wav';
+            }
+            setProgress(93, 'Packaging file...', 2);
+
+            /* ── Phase 4: Trigger Download ── */
+            const origName     = selectedFile.name.replace(/\.[^.]+$/, '');
+            const downloadName = `${origName} Cybzen Effect.${ext}`;
+
+            const url = URL.createObjectURL(blob);
+            const a   = document.createElement('a');
+            a.href     = url;
+            a.download = downloadName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            setProgress(100, '✓ Done!', 3);
+            setStatus('✓ Download complete!', false);
+            hideProgress();
+            setTimeout(() => setStatus(''), 3500);
+
+        } catch (err) {
+            console.error('Export error:', err);
+            setStatus('✗ Export failed. See console.', false);
+            document.getElementById('progressWrap').classList.remove('visible');
+            setTimeout(() => setStatus(''), 4000);
+        } finally {
+            btn.disabled = false;
+        }
+    });
+</script>
+
+</body>
+</html>
