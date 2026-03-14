@@ -118,25 +118,7 @@
             box-shadow: 0 0 8px var(--neon-blue);
         }
 
-        .atmos-btn {
-            width: 100%;
-            padding: 14px;
-            margin-top: 10px;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--neon-gold);
-            color: var(--neon-gold);
-            border-radius: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.4s;
-            text-transform: uppercase;
-        }
-
-        .atmos-btn.active {
-            background: var(--neon-gold);
-            color: black;
-            box-shadow: 0 0 20px var(--neon-gold);
-        }
+        
 
         audio {
             width: 100%;
@@ -275,7 +257,7 @@
             <input type="range" id="reverbSlider" min="0" max="1" step="0.01" value="0">
         </div>
 
-        <button id="atmosBtn" class="atmos-btn">Dolby Atmos: OFF</button>
+        
 
         <!-- ── Export Controls ── -->
         <hr class="export-divider">
@@ -365,14 +347,13 @@
     const reverbNode  = audioCtx.createConvolver();
     const dryGain     = audioCtx.createGain();
     const wetGain     = audioCtx.createGain();
-    const compressor  = audioCtx.createDynamicsCompressor();
+
 
     bassFilter.type            = "lowshelf";
     bassFilter.frequency.value = 180;
     bassFilter.gain.value      = 0;
 
-    compressor.threshold.setValueAtTime(-20, audioCtx.currentTime);
-    compressor.ratio.setValueAtTime(10,     audioCtx.currentTime);
+    
 
     /* Shared impulse-response buffer (reused by export) */
     const irLen = audioCtx.sampleRate * 2.5;
@@ -401,19 +382,7 @@
         dryGain.gain.setTargetAtTime(1 - (val * 0.3),   audioCtx.currentTime, 0.1);
     };
 
-    let atmos = false;
-    document.getElementById('atmosBtn').onclick = function () {
-        atmos = !atmos;
-        this.classList.toggle('active');
-        this.innerText = atmos ? "Dolby Atmos: ON" : "Dolby Atmos: OFF";
-        dryGain.disconnect();
-        if (atmos) {
-            dryGain.connect(compressor);
-            compressor.connect(audioCtx.destination);
-        } else {
-            dryGain.connect(audioCtx.destination);
-        }
-    };
+    
 
 
     /* ══════════════════════════════════════════
@@ -540,7 +509,7 @@
         /* Read current UI state */
         const bassGain   = parseFloat(document.getElementById('bassSlider').value);
         const reverbVal  = parseFloat(document.getElementById('reverbSlider').value);
-        const atmosOn    = atmos;
+        
 
         /* Source */
         const bufSrc = offlineCtx.createBufferSource();
@@ -576,13 +545,7 @@
         dry.gain.value = 1 - (reverbVal * 0.3);
         wet.gain.value = reverbVal * 1.5;
 
-        /* Atmos compressor */
-        let comp = null;
-        if (atmosOn) {
-            comp = offlineCtx.createDynamicsCompressor();
-            comp.threshold.setValueAtTime(-20, offlineCtx.currentTime);
-            comp.ratio.setValueAtTime(10,      offlineCtx.currentTime);
-        }
+        
 
         /* Connect graph */
         bufSrc.connect(bass);
@@ -591,12 +554,7 @@
         convolver.connect(wet);
         wet.connect(offlineCtx.destination);
 
-        if (atmosOn) {
-            dry.connect(comp);
-            comp.connect(offlineCtx.destination);
-        } else {
-            dry.connect(offlineCtx.destination);
-        }
+        
 
         bufSrc.start(0);
         return bufSrc; /* Not strictly needed but returned for clarity */
