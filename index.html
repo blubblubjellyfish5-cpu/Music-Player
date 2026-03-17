@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CybZ-Zen Studio</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --neon-blue: #00f2ff;
@@ -810,6 +811,345 @@
         }
     });
 </script>
+
+    <!-- ═══════════════════════════════════ -->
+<!--   LEAF MESSAGE CARD — EMBEDDABLE   -->
+<!-- ═══════════════════════════════════ -->
+
+<style>
+  /* ── Google Font ── */
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap');
+
+  .leaf-card-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 3rem 1.25rem;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .leaf-card {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 24px;
+    padding: 2.5rem 2.25rem 2.25rem;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+
+  /* Subtle shimmer line at top */
+  .leaf-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 12%; right: 12%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+    border-radius: 999px;
+  }
+
+  .leaf-card-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 300;
+    font-style: italic;
+    letter-spacing: 0.01em;
+    color: inherit;
+    margin: 0 0 0.25rem;
+    opacity: 0.92;
+  }
+
+  .leaf-card-sub {
+    font-size: 0.78rem;
+    font-weight: 300;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.45;
+    margin: 0 0 2rem;
+    color: inherit;
+  }
+
+  .leaf-field {
+    margin-bottom: 1.25rem;
+  }
+
+  .leaf-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    opacity: 0.55;
+    margin-bottom: 0.5rem;
+    color: inherit;
+  }
+
+  .leaf-input,
+  .leaf-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 300;
+    color: inherit;
+    outline: none;
+    transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+  }
+
+  .leaf-input::placeholder,
+  .leaf-textarea::placeholder {
+    opacity: 0.3;
+    font-style: italic;
+  }
+
+  .leaf-input:focus,
+  .leaf-textarea:focus {
+    border-color: rgba(255, 255, 255, 0.38);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+  }
+
+  .leaf-textarea {
+    resize: vertical;
+    min-height: 110px;
+  }
+
+  .leaf-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.8rem 1.5rem;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.22s, transform 0.15s, box-shadow 0.22s;
+  }
+
+  .leaf-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.24);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+  }
+
+  .leaf-btn:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .leaf-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ── Success Popup ── */
+  .leaf-popup-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .leaf-popup-overlay.active {
+    display: flex;
+    animation: leafFadeIn 0.25s ease;
+  }
+
+  .leaf-popup {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 20px;
+    padding: 2.5rem 2.25rem 2rem;
+    max-width: 340px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.18);
+    animation: leafPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .leaf-popup-icon {
+    font-size: 2.4rem;
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+
+  .leaf-popup-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.5rem;
+    font-style: italic;
+    font-weight: 300;
+    color: inherit;
+    margin: 0 0 0.5rem;
+    opacity: 0.9;
+  }
+
+  .leaf-popup-body {
+    font-size: 0.82rem;
+    font-weight: 300;
+    opacity: 0.5;
+    letter-spacing: 0.03em;
+    color: inherit;
+    margin: 0 0 1.5rem;
+  }
+
+  .leaf-popup-close {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 10px;
+    padding: 0.6rem 1.6rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .leaf-popup-close:hover {
+    background: rgba(255,255,255,0.24);
+  }
+
+  .leaf-error-text {
+    font-size: 0.75rem;
+    color: #ff7070;
+    margin-top: 0.5rem;
+    display: none;
+  }
+
+  @keyframes leafFadeIn {
+    from { opacity: 0 }
+    to   { opacity: 1 }
+  }
+
+  @keyframes leafPopUp {
+    from { opacity: 0; transform: scale(0.88) translateY(12px) }
+    to   { opacity: 1; transform: scale(1) translateY(0) }
+  }
+</style>
+
+<!-- Card -->
+<div class="leaf-card-wrap">
+  <div class="leaf-card">
+    <p class="leaf-card-title">Leave a message</p>
+    <p class="leaf-card-sub">for Leaf ✦</p>
+
+    <div class="leaf-field">
+      <label class="leaf-label" for="leaf-name">Who are you for Leaf?</label>
+      <input
+        class="leaf-input"
+        id="leaf-name"
+        type="text"
+        placeholder="a friend, a stranger, a fan…"
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="leaf-field">
+      <label class="leaf-label" for="leaf-msg">Your message</label>
+      <textarea
+        class="leaf-textarea"
+        id="leaf-msg"
+        placeholder="say something kind, curious, or true…"
+      ></textarea>
+    </div>
+
+    <div class="leaf-error-text" id="leaf-error">Something went wrong. Please try again.</div>
+
+    <button class="leaf-btn" id="leaf-send-btn" onclick="leafSendMessage()">
+      Send ✦
+    </button>
+  </div>
+</div>
+
+<!-- Success Popup -->
+<div class="leaf-popup-overlay" id="leaf-popup-overlay">
+  <div class="leaf-popup">
+    <span class="leaf-popup-icon">🌿</span>
+    <p class="leaf-popup-title">Message sent</p>
+    <p class="leaf-popup-body">Leaf will find your words waiting.</p>
+    <button class="leaf-popup-close" onclick="leafClosePopup()">Close</button>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const SUPABASE_URL = 'https://jpmnelsiltgrtjmhpixy.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwbW5lbHNpbHRncnRqbWhwaXh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NDkwOTAsImV4cCI6MjA4OTMyNTA5MH0.MKgf_963FuYykq9NsLVUr-0I3_y9guMdWcKRf_K_vCo';
+
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    window.leafSendMessage = async function () {
+      const nameEl  = document.getElementById('leaf-name');
+      const msgEl   = document.getElementById('leaf-msg');
+      const btn     = document.getElementById('leaf-send-btn');
+      const errEl   = document.getElementById('leaf-error');
+
+      const name    = nameEl.value.trim();
+      const message = msgEl.value.trim();
+
+      errEl.style.display = 'none';
+
+      if (!name || !message) {
+        errEl.textContent = 'Please fill in both fields.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+
+      const { error } = await sb.from('Messages').insert([{ name, message }]);
+
+      if (error) {
+        errEl.textContent = 'Something went wrong. Please try again.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Send ✦';
+        return;
+      }
+
+      // Reset form
+      nameEl.value = '';
+      msgEl.value  = '';
+      btn.disabled = false;
+      btn.textContent = 'Send ✦';
+
+      // Show popup
+      document.getElementById('leaf-popup-overlay').classList.add('active');
+    };
+
+    window.leafClosePopup = function () {
+      document.getElementById('leaf-popup-overlay').classList.remove('active');
+    };
+
+    // Close on overlay click
+    document.getElementById('leaf-popup-overlay').addEventListener('click', function (e) {
+      if (e.target === this) leafClosePopup();
+    });
+  })();
+</script>
+<!-- ════════════════ END LEAF MESSAGE CARD ════════════════ -->
 
 </body>
 </html>
